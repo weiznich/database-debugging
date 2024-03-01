@@ -9,3 +9,6 @@ edition = "2021"
 diesel = {version="2.1.4", features=["postgres"]}
 dotenvy = "0.15.7"
 rayon = "1.8.1"
+
+[patch.crates-io]
+diesel = { git = "https://github.com/weiznich/diesel", rev = "eb721e9e44c8a7321fc68118165f92327a03603f" }

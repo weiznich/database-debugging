@@ -1,7 +1,8 @@
-use diesel::{Connection, PgConnection, RunQueryDsl};
+use diesel::{Connection, PgConnection};
 use dotenvy::dotenv;
 use imdb::{models::Principal, schema::principals};
 use rayon::prelude::*;
+use std::thread::available_parallelism;
 use std::{
 	env,
 	fs::File,
@@ -44,23 +45,17 @@ fn main() {
 			break;
 		}
 	}
-	principals.par_chunks(10922).for_each_init(
+	let chunk_size = principals.len() / (available_parallelism().unwrap().get() / 2);
+	principals.par_chunks(chunk_size).for_each_init(
 		|| {
 			PgConnection::establish(&database_url)
 				.unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 		},
 		|conn, chunk| {
-			if let Ok(chunk) = <&[_; 10922]>::try_from(chunk) {
-				diesel::insert_into(principals::table)
-					.values(chunk)
-					.execute(conn)
-					.unwrap();
-			} else {
-				diesel::insert_into(principals::table)
-					.values(chunk)
-					.execute(conn)
-					.unwrap();
-			}
+			diesel::copy_in(principals::table)
+				.from_insertable(chunk)
+				.execute(conn)
+				.unwrap();
 		},
 	);
 	println!(
