@@ -50,10 +50,17 @@ fn main() {
 				.unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 		},
 		|conn, chunk| {
-			diesel::insert_into(principals::table)
-				.values(chunk)
-				.execute(conn)
-				.unwrap();
+			if let Ok(chunk) = <&[_; 10922]>::try_from(chunk) {
+				diesel::insert_into(principals::table)
+					.values(chunk)
+					.execute(conn)
+					.unwrap();
+			} else {
+				diesel::insert_into(principals::table)
+					.values(chunk)
+					.execute(conn)
+					.unwrap();
+			}
 		},
 	);
 	println!(
